@@ -4,25 +4,25 @@ const cors = require("cors");
 const axios = require("axios");
 const { createClient } = require("@supabase/supabase-js");
 
-
 const app = express();
 
-// Add security headers
 app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
   next();
 });
 
-// Configure CORS for production
-app.use(cors({
-  origin: process.env.FRONTEND_URL || '*', // Replace with your frontend URL in production
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(express.json());
 
-// Add request logging
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "*",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
@@ -35,9 +35,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy' });
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "healthy" });
 });
 
 app.post("/api/instagram/setup", async (req, res) => {
@@ -46,7 +45,8 @@ app.post("/api/instagram/setup", async (req, res) => {
 
     if (!shortLivedToken || !userId || !facebookPageId) {
       return res.status(400).json({
-        error: "Missing required parameters: shortLivedToken, userId, or facebookPageId",
+        error:
+          "Missing required parameters: shortLivedToken, userId, or facebookPageId",
       });
     }
 
@@ -74,7 +74,6 @@ app.post("/api/instagram/setup", async (req, res) => {
       }
     );
 
-
     if (!accountResponse.data.instagram_business_account) {
       throw new Error(
         "No Instagram Business Account found for this Facebook Page"
@@ -83,7 +82,6 @@ app.post("/api/instagram/setup", async (req, res) => {
 
     const instagramAccountId =
       accountResponse.data.instagram_business_account.id;
-
 
     try {
       const { data, error } = await supabase
@@ -96,7 +94,6 @@ app.post("/api/instagram/setup", async (req, res) => {
           connected_at: new Date().toISOString(),
         })
         .select();
-
 
       if (error) {
         console.error("Supabase error:", error);
@@ -116,30 +113,29 @@ app.post("/api/instagram/setup", async (req, res) => {
     }
   } catch (error) {
     console.error("Instagram Setup Error:", error.response?.data || error);
-    
+
     if (error.response?.data?.error) {
       return res.status(400).json({
         error: "Instagram API Error",
         details: error.response.data.error.message,
-        code: error.response.data.error.code
+        code: error.response.data.error.code,
       });
     }
 
-    if (error.code === 'PGRST') {
+    if (error.code === "PGRST") {
       return res.status(400).json({
         error: "Database Error",
         details: error.message,
-        code: error.code
+        code: error.code,
       });
     }
 
     res.status(500).json({
       error: "Failed to setup Instagram integration",
-      details: error.message
+      details: error.message,
     });
   }
 });
-
 
 app.get("/api/instagram/posts/:userId", async (req, res) => {
   try {
@@ -168,7 +164,6 @@ app.get("/api/instagram/posts/:userId", async (req, res) => {
       }
     );
 
-
     const totalCountResponse = await axios.get(
       `https://graph.facebook.com/v18.0/${accountData.instagram_account_id}/media`,
       {
@@ -191,7 +186,7 @@ app.get("/api/instagram/posts/:userId", async (req, res) => {
           params: {
             limit: (page - 1) * limit,
             access_token: accountData.access_token,
-            fields: "id", 
+            fields: "id",
           },
         }
       );
@@ -200,7 +195,6 @@ app.get("/api/instagram/posts/:userId", async (req, res) => {
         after = cursorResponse.data.paging.cursors.after;
       }
     }
-
 
     const postsResponse = await axios.get(
       `https://graph.facebook.com/v18.0/${accountData.instagram_account_id}/media`,
@@ -214,7 +208,6 @@ app.get("/api/instagram/posts/:userId", async (req, res) => {
         },
       }
     );
-
 
     res.json({
       success: true,
@@ -239,24 +232,23 @@ app.get("/api/instagram/posts/:userId", async (req, res) => {
       return res.status(400).json({
         error: "Instagram API Error",
         details: error.response.data.error.message,
-        code: error.response.data.error.code
+        code: error.response.data.error.code,
       });
     }
 
     if (error.message === "Instagram account not found") {
       return res.status(404).json({
         error: "Not Found",
-        details: "Instagram account not found for this user"
+        details: "Instagram account not found for this user",
       });
     }
 
     res.status(500).json({
       error: "Failed to fetch Instagram posts",
-      details: error.message
+      details: error.message,
     });
   }
 });
-
 
 app.post("/api/instagram/upload", async (req, res) => {
   try {
@@ -267,7 +259,6 @@ app.post("/api/instagram/upload", async (req, res) => {
         error: "Missing required parameters: userId or imageUrl",
       });
     }
-
 
     const { data: accountData, error: accountError } = await supabase
       .from("instagram_accounts")
@@ -320,7 +311,7 @@ app.post("/api/instagram/upload", async (req, res) => {
     if (error.message.includes("Image validation failed")) {
       return res.status(400).json({
         error: "Invalid Image",
-        details: error.message
+        details: error.message,
       });
     }
 
@@ -328,30 +319,33 @@ app.post("/api/instagram/upload", async (req, res) => {
       return res.status(400).json({
         error: "Instagram API Error",
         details: error.response.data.error.message,
-        code: error.response.data.error.code
+        code: error.response.data.error.code,
       });
     }
 
     if (error.message === "Instagram account not found") {
       return res.status(404).json({
         error: "Not Found",
-        details: "Instagram account not found for this user"
+        details: "Instagram account not found for this user",
       });
     }
 
     res.status(500).json({
       error: "Failed to upload image to Instagram",
-      details: error.message
+      details: error.message,
     });
   }
 });
 
 // Add error logging middleware at the bottom before app.listen
 app.use((err, req, res, next) => {
-  console.error('Unhandled Error:', err);
+  console.error("Unhandled Error:", err);
   res.status(500).json({
-    error: 'Internal Server Error',
-    details: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
+    error: "Internal Server Error",
+    details:
+      process.env.NODE_ENV === "production"
+        ? "An unexpected error occurred"
+        : err.message,
   });
 });
 
