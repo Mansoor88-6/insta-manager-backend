@@ -145,7 +145,7 @@ app.get("/api/instagram/posts/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
     const page = parseInt(req.query.page) || 1;
-
+    const limit = 18;
 
     const { data: accountData, error: accountError } = await supabase
       .from("instagram_accounts")
